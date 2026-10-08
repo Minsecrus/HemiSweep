@@ -11,11 +11,7 @@ export interface SphereMesh {
 }
 
 export type GridKind =
-  | "dual"
-  | "triangular"
-  | "quadrilateral"
-  | "heptagonal"
-  | "octagonal";
+  "dual" | "triangular" | "quadrilateral" | "heptagonal" | "octagonal";
 
 export interface BoardCell {
   id: number;

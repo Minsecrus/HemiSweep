@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { triangleKey } from "./sphere";
+import { faceKey } from "./complex";
 import { createProjectiveMesh } from "./topology";
 import type { ProjectiveMesh, Triangle } from "./types";
 import { cross, dot, length, add, subtract } from "./vector";
@@ -76,7 +76,7 @@ describe.each([1, 2, 5, 7, 9])(
         ) as unknown as Triangle;
         expect(opposite).not.toBe(id);
         expect(sphere.faceAntipodes[opposite]).toBe(id);
-        expect(triangleKey(mapped)).toBe(triangleKey(sphere.faces[opposite]));
+        expect(faceKey(mapped)).toBe(faceKey(sphere.faces[opposite]));
         const reversed: Triangle = [mapped[0], mapped[2], mapped[1]];
         expect(isCyclicEqual(reversed, sphere.faces[opposite])).toBe(true);
         expect(mesh.sphereFaceToVertex[opposite]).toBe(

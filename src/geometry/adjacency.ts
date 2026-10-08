@@ -1,6 +1,6 @@
-import type { BoardMesh } from './types';
+import type { BoardMesh } from "./types";
 
-export type AdjacencyRule = 'edge' | 'vertex';
+export type AdjacencyRule = "edge" | "vertex";
 
 /**
  * Choose the game relation without changing the geometric cell complex.
@@ -8,9 +8,13 @@ export type AdjacencyRule = 'edge' | 'vertex';
  * representatives never enter this calculation. Multiple shared vertices or
  * parallel edges still contribute each neighboring logical cell only once.
  */
-export function createAdjacencyGraph(mesh: BoardMesh, rule: AdjacencyRule): number[][] {
-  if (rule === 'edge') return mesh.cells.map(cell => [...cell.neighbors]);
-  if (rule !== 'vertex') throw new RangeError(`Unknown adjacency rule: ${String(rule)}`);
+export function createAdjacencyGraph(
+  mesh: BoardMesh,
+  rule: AdjacencyRule,
+): number[][] {
+  if (rule === "edge") return mesh.cells.map((cell) => [...cell.neighbors]);
+  if (rule !== "vertex")
+    throw new RangeError(`Unknown adjacency rule: ${String(rule)}`);
 
   const cellsAtVertex = new Map<number, Set<number>>();
   for (const cell of mesh.cells) {
@@ -24,7 +28,7 @@ export function createAdjacencyGraph(mesh: BoardMesh, rule: AdjacencyRule): numb
     }
   }
 
-  return mesh.cells.map(cell => {
+  return mesh.cells.map((cell) => {
     const neighbors = new Set<number>();
     for (const vertexId of cell.vertexIds) {
       for (const incident of cellsAtVertex.get(vertexId)!) {

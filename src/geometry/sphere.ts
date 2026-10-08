@@ -1,5 +1,6 @@
 import type { SphereMesh, Triangle, Vec3 } from "./types";
-import { add, cross, dot, normalize, scale, subtract } from "./vector";
+import { faceAntipodes, outwardOrientation } from "./complex";
+import { add, normalize, scale } from "./vector";
 
 const phi = (1 + Math.sqrt(5)) / 2;
 
@@ -54,10 +55,6 @@ function barycentricKey(weights: readonly Weight[]): string {
     .sort(([a], [b]) => a - b)
     .map(([vertex, weight]) => `${vertex}:${weight}`)
     .join("/");
-}
-
-export function triangleKey(face: Triangle): string {
-  return [...face].sort((a, b) => a - b).join(":");
 }
 
 /**
@@ -118,15 +115,7 @@ export function createSphereMesh(frequency: number): SphereMesh {
 
   // Assert the orientation inherited from the explicit base complex.
   for (const [a, b, c] of faces) {
-    if (
-      dot(
-        vertices[a],
-        cross(
-          subtract(vertices[b], vertices[a]),
-          subtract(vertices[c], vertices[a]),
-        ),
-      ) <= 0
-    ) {
+    if (outwardOrientation(vertices[a], vertices[b], vertices[c]) <= 0) {
       throw new Error("The spherical triangulation must be oriented outwards.");
     }
   }
@@ -141,15 +130,11 @@ export function createSphereMesh(frequency: number): SphereMesh {
       throw new Error("Missing antipodal subdivision vertex.");
     return opposite;
   });
-  const faceByKey = new Map(faces.map((face, id) => [triangleKey(face), id]));
-  const faceAntipodes = faces.map(([a, b, c]) => {
-    const opposite = faceByKey.get(
-      triangleKey([vertexAntipodes[a], vertexAntipodes[b], vertexAntipodes[c]]),
-    );
-    if (opposite === undefined)
-      throw new Error("Missing antipodal subdivision face.");
-    return opposite;
-  });
-
-  return { frequency, vertices, faces, vertexAntipodes, faceAntipodes };
+  return {
+    frequency,
+    vertices,
+    faces,
+    vertexAntipodes,
+    faceAntipodes: faceAntipodes(faces, vertexAntipodes),
+  };
 }

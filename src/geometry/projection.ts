@@ -1,4 +1,5 @@
 import type { BoardMesh, CellFragment, Quaternion, Vec2, Vec3 } from "./types";
+import { dot, negate, normalize } from "./vector";
 
 export const IDENTITY_ROTATION: Quaternion = [0, 0, 0, 1];
 
@@ -7,19 +8,6 @@ const EPSILON = 1e-12;
 // polygons therefore render the same curve, including the equatorial seam.
 const MAX_ARC_STEP = 0.012;
 const HALF_PI = Math.PI / 2;
-
-function dot(a: Vec3, b: Vec3): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-function normalize(v: Vec3): Vec3 {
-  const length = Math.hypot(...v);
-  return [v[0] / length, v[1] / length, v[2] / length];
-}
-
-function negate(v: Vec3): Vec3 {
-  return [-v[0], -v[1], -v[2]];
-}
 
 /** Hamilton product: the rotation b is applied before the rotation a. */
 export function multiplyQuaternion(a: Quaternion, b: Quaternion): Quaternion {

@@ -9,23 +9,22 @@ import type {
   SphereMesh,
   Vec3,
 } from "./types";
-import { add, cross, dot, normalize } from "./vector";
+import {
+  antipodalClasses,
+  antipodalEdgeOrbits,
+  centroid,
+  collectEdges,
+  edgeKey,
+} from "./complex";
+import { cross, dot } from "./vector";
 
 export type { GridKind } from "./types";
-
-interface SphereEdge {
-  endpoints: readonly [number, number];
-  faces: number[];
-}
 
 interface QuotientPoints {
   points: Vec3[];
   representatives: number[];
   sphereToQuotient: number[];
 }
-
-const edgeKey = (a: number, b: number): string =>
-  a < b ? `${a}:${b}` : `${b}:${a}`;
 
 function validateFrequency(frequency: number): void {
   if (!Number.isInteger(frequency) || frequency < 1) {
@@ -55,35 +54,12 @@ function quotientPoints(
   points: readonly Vec3[],
   antipodes: readonly number[],
 ): QuotientPoints {
-  const sphereToQuotient = Array<number>(points.length).fill(-1);
-  const representatives: number[] = [];
-  const quotient: Vec3[] = [];
-  points.forEach((point, id) => {
-    if (sphereToQuotient[id] !== -1) return;
-    sphereToQuotient[id] = quotient.length;
-    sphereToQuotient[antipodes[id]] = quotient.length;
-    representatives.push(id);
-    quotient.push(point);
-  });
-  return { points: quotient, representatives, sphereToQuotient };
-}
-
-function collectSphereEdges(sphere: SphereMesh): Map<string, SphereEdge> {
-  const result = new Map<string, SphereEdge>();
-  sphere.faces.forEach((face, faceId) => {
-    face.forEach((a, index) => {
-      const b = face[(index + 1) % 3];
-      const key = edgeKey(a, b);
-      const previous = result.get(key);
-      if (previous) previous.faces.push(faceId);
-      else
-        result.set(key, {
-          endpoints: a < b ? [a, b] : [b, a],
-          faces: [faceId],
-        });
-    });
-  });
-  return result;
+  const { representatives, toClass } = antipodalClasses(antipodes);
+  return {
+    points: representatives.map((id) => points[id]),
+    representatives,
+    sphereToQuotient: toClass,
+  };
 }
 
 /**
@@ -128,10 +104,8 @@ function buildQuotientEdges(cells: BoardCell[]): ProjectiveEdge[] {
 }
 
 function faceCenters(sphere: SphereMesh): Vec3[] {
-  return sphere.faces.map(([a, b, c]) =>
-    normalize(
-      add(add(sphere.vertices[a], sphere.vertices[b]), sphere.vertices[c]),
-    ),
+  return sphere.faces.map((face) =>
+    centroid(face.map((vertex) => sphere.vertices[vertex])),
   );
 }
 
@@ -169,31 +143,15 @@ function quadrilateralMesh(sphere: SphereMesh): BoardMesh {
   const centers = faceCenters(sphere);
   const faceClasses = quotientPoints(centers, sphere.faceAntipodes);
   const faceOffset = vertexClasses.points.length;
-  const sphereEdges = collectSphereEdges(sphere);
-  const processed = new Set<string>();
   const cells: BoardCell[] = [];
 
-  for (const [key, edge] of sphereEdges) {
-    if (processed.has(key)) continue;
+  for (const edge of antipodalEdgeOrbits(
+    collectEdges(sphere.faces),
+    sphere.vertexAntipodes,
+  )) {
     const [a, b] = edge.endpoints;
-    const antipodalKey = edgeKey(
-      sphere.vertexAntipodes[a],
-      sphere.vertexAntipodes[b],
-    );
-    const opposite = sphereEdges.get(antipodalKey);
-    if (
-      !opposite ||
-      edge.faces.length !== 2 ||
-      opposite.faces.length !== 2 ||
-      key === antipodalKey
-    ) {
-      throw new Error("The spherical edge quotient must be a free involution.");
-    }
-    processed.add(key);
-    processed.add(antipodalKey);
-
     const [f, g] = edge.faces;
-    const center = normalize(add(sphere.vertices[a], sphere.vertices[b]));
+    const center = centroid([sphere.vertices[a], sphere.vertices[b]]);
     const polygon = [
       sphere.vertices[a],
       centers[f],

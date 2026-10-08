@@ -1,6 +1,14 @@
 import { createSphereMesh } from "./sphere";
 import type { BoardCell, BoardMesh, ProjectiveEdge, Vec3 } from "./types";
-import { add, cross, dot, normalize, subtract } from "./vector";
+import {
+  antipodalClasses,
+  antipodalEdgeOrbits,
+  centroid,
+  collectEdges,
+  faceAntipodes,
+  outwardOrientation,
+  vertexLinks,
+} from "./complex";
 
 /** {a,b}: each face has a sides; b faces meet at each vertex. */
 export type RegularSymbol = readonly [a: number, b: number];
@@ -20,33 +28,17 @@ interface SphericalPolyhedron {
   faceAntipodes: number[];
 }
 
-interface SphericalEdge {
-  endpoints: readonly [number, number];
-  faces: number[];
-}
-
-const edgeKey = (a: number, b: number): string =>
-  a < b ? `${a}:${b}` : `${b}:${a}`;
-const faceKey = (vertices: number[]): string =>
-  [...vertices].sort((a, b) => a - b).join(":");
-const centroid = (vertices: Vec3[]): Vec3 =>
-  normalize(vertices.reduce(add, [0, 0, 0]));
-
 function withFaceAntipodes(
   vertices: Vec3[],
   faces: number[][],
   vertexAntipodes: number[],
 ): SphericalPolyhedron {
-  const faceByKey = new Map(faces.map((face, id) => [faceKey(face), id]));
-  const faceAntipodes = faces.map((face) => {
-    const opposite = faceByKey.get(
-      faceKey(face.map((vertex) => vertexAntipodes[vertex])),
-    );
-    if (opposite === undefined)
-      throw new Error("A regular spherical face has no antipodal partner.");
-    return opposite;
-  });
-  return { vertices, faces, vertexAntipodes, faceAntipodes };
+  return {
+    vertices,
+    faces,
+    vertexAntipodes,
+    faceAntipodes: faceAntipodes(faces, vertexAntipodes),
+  };
 }
 
 function octahedron(): SphericalPolyhedron {
@@ -64,17 +56,8 @@ function octahedron(): SphericalPolyhedron {
     for (const y of [2, 3])
       for (const z of [4, 5]) {
         const face = [x, y, z];
-        if (
-          dot(
-            vertices[x],
-            cross(
-              subtract(vertices[y], vertices[x]),
-              subtract(vertices[z], vertices[x]),
-            ),
-          ) < 0
-        ) {
+        if (outwardOrientation(vertices[x], vertices[y], vertices[z]) < 0)
           face.reverse();
-        }
         faces.push(face);
       }
   return withFaceAntipodes(vertices, faces, [1, 0, 3, 2, 5, 4]);
@@ -90,35 +73,7 @@ function dual(sphere: SphericalPolyhedron): SphericalPolyhedron {
   const vertices = sphere.faces.map((face) =>
     centroid(face.map((vertex) => sphere.vertices[vertex])),
   );
-  const links = sphere.vertices.map(
-    () => new Map<number, { next: number; face: number }>(),
-  );
-  sphere.faces.forEach((face, faceId) => {
-    face.forEach((vertex, index) => {
-      const from = face[(index + 1) % face.length];
-      const next = face[(index + face.length - 1) % face.length];
-      if (links[vertex].has(from))
-        throw new Error("The spherical vertex link is not a manifold.");
-      links[vertex].set(from, { next, face: faceId });
-    });
-  });
-  const faces = links.map((link) => {
-    const start = link.keys().next().value;
-    if (start === undefined)
-      throw new Error("A regular polyhedron has an isolated vertex.");
-    let current = start;
-    const face: number[] = [];
-    do {
-      const step = link.get(current);
-      if (!step || face.length >= link.size)
-        throw new Error("The spherical vertex link must be a single cycle.");
-      face.push(step.face);
-      current = step.next;
-    } while (current !== start);
-    if (face.length !== link.size)
-      throw new Error("The spherical vertex link is disconnected.");
-    return face;
-  });
+  const faces = vertexLinks(sphere.vertices.length, sphere.faces);
   return {
     vertices,
     faces,
@@ -133,67 +88,26 @@ function dual(sphere: SphericalPolyhedron): SphericalPolyhedron {
  * edges. In particular, the hemi-cube's four sides reach two distinct cells.
  */
 function quotient(sphere: SphericalPolyhedron): BoardMesh {
-  const vertexToQuotient = Array<number>(sphere.vertices.length).fill(-1);
-  const faceToCell = Array<number>(sphere.faces.length).fill(-1);
-  const vertices: Vec3[] = [];
-  sphere.vertices.forEach((point, id) => {
-    if (vertexToQuotient[id] !== -1) return;
-    const opposite = sphere.vertexAntipodes[id];
-    if (opposite === id || sphere.vertexAntipodes[opposite] !== id)
-      throw new Error("The antipodal vertex action must be free.");
-    vertexToQuotient[id] = vertices.length;
-    vertexToQuotient[opposite] = vertices.length;
-    vertices.push(point);
-  });
-  const cells: BoardCell[] = [];
-  sphere.faces.forEach((face, id) => {
-    if (faceToCell[id] !== -1) return;
-    const opposite = sphere.faceAntipodes[id];
-    if (opposite === id || sphere.faceAntipodes[opposite] !== id)
-      throw new Error("The antipodal face action must be free.");
-    faceToCell[id] = cells.length;
-    faceToCell[opposite] = cells.length;
-    const polygon = face.map((vertex) => sphere.vertices[vertex]);
-    cells.push({
-      id: cells.length,
+  const vertexClasses = antipodalClasses(sphere.vertexAntipodes);
+  const cellClasses = antipodalClasses(sphere.faceAntipodes);
+  const vertexToQuotient = vertexClasses.toClass;
+  const faceToCell = cellClasses.toClass;
+  const cells: BoardCell[] = cellClasses.representatives.map((face, id) => {
+    const polygon = sphere.faces[face].map((vertex) => sphere.vertices[vertex]);
+    return {
+      id,
       center: centroid(polygon),
       polygon,
-      vertexIds: face.map((vertex) => vertexToQuotient[vertex]),
+      vertexIds: sphere.faces[face].map((vertex) => vertexToQuotient[vertex]),
       neighbors: [],
-    });
-  });
-  const sphereEdges = new Map<string, SphericalEdge>();
-  sphere.faces.forEach((face, faceId) => {
-    face.forEach((a, index) => {
-      const b = face[(index + 1) % face.length];
-      const key = edgeKey(a, b);
-      const edge = sphereEdges.get(key);
-      if (edge) edge.faces.push(faceId);
-      else sphereEdges.set(key, { endpoints: [a, b], faces: [faceId] });
-    });
+    };
   });
   const edges: ProjectiveEdge[] = [];
-  const seen = new Set<string>();
-  for (const [key, edge] of sphereEdges) {
-    if (seen.has(key)) continue;
+  for (const edge of antipodalEdgeOrbits(
+    collectEdges(sphere.faces),
+    sphere.vertexAntipodes,
+  )) {
     const [a, b] = edge.endpoints;
-    const oppositeKey = edgeKey(
-      sphere.vertexAntipodes[a],
-      sphere.vertexAntipodes[b],
-    );
-    const opposite = sphereEdges.get(oppositeKey);
-    if (
-      !opposite ||
-      key === oppositeKey ||
-      edge.faces.length !== 2 ||
-      opposite.faces.length !== 2
-    ) {
-      throw new Error(
-        "Every edge must have two incident faces and a distinct antipodal partner.",
-      );
-    }
-    seen.add(key);
-    seen.add(oppositeKey);
     const cellA = faceToCell[edge.faces[0]];
     const cellB = faceToCell[edge.faces[1]];
     const vertexA = vertexToQuotient[a];
@@ -213,7 +127,12 @@ function quotient(sphere: SphericalPolyhedron): BoardMesh {
   cells.forEach((cell) => {
     cell.neighbors = [...new Set(cell.neighbors)].sort((a, b) => a - b);
   });
-  return { frequency: 1, vertices, cells, edges };
+  return {
+    frequency: 1,
+    vertices: vertexClasses.representatives.map((id) => sphere.vertices[id]),
+    cells,
+    edges,
+  };
 }
 
 /**

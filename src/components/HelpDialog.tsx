@@ -51,7 +51,8 @@ export default function HelpDialog({
           <Move size={19} />
           <h3>旋转</h3>
           <p>
-            拖动或按住 WASD 改变视角。圆盘边界的对径点是同一个位置，两侧片段状态同步；旋转不改变棋局。
+            拖动或按住 WASD
+            改变视角。圆盘边界的对径点是同一个位置，两侧片段状态同步；旋转不改变棋局。
           </p>
         </div>
       </div>
