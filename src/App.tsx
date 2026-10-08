@@ -39,6 +39,7 @@ export default function App() {
     density,
     pattern,
     adjacency,
+    noGuess,
     a,
     b,
     reset,
@@ -54,7 +55,15 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>(savedTheme);
   useViewKeys(setRotation, !helpOpen && !settingsOpen);
-  const config: GameConfig = { frequency, density, pattern, adjacency, a, b };
+  const config: GameConfig = {
+    frequency,
+    density,
+    pattern,
+    adjacency,
+    noGuess,
+    a,
+    b,
+  };
   const status =
     game.status === "won"
       ? "胜利"

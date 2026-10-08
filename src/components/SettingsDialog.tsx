@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Moon, NotebookPen, Sun, X } from "lucide-react";
-import { DENSITIES, SIZES } from "../game/useGame";
+import { DENSITIES, SIZES, supportsNoGuess } from "../game/useGame";
 import type { BoardPattern, GameConfig } from "../game/useGame";
 import { REGULAR_SYMBOLS } from "../geometry/regular";
 import { cellCount } from "../geometry/tilings";
@@ -214,7 +214,9 @@ export default function SettingsDialog({
                 id="settings-adjacency"
                 value={draft.adjacency}
                 onChange={(event) =>
-                  updateConfig({ adjacency: event.target.value as AdjacencyRule })
+                  updateConfig({
+                    adjacency: event.target.value as AdjacencyRule,
+                  })
                 }
               >
                 <option value="edge">共边</option>
@@ -320,6 +322,25 @@ export default function SettingsDialog({
                 </button>
               </div>
             </div>
+
+            <label
+              className="settings-checkbox"
+              title={
+                supportsNoGuess(draft.pattern)
+                  ? undefined
+                  : "三角形与四边形网格不支持无猜"
+              }
+            >
+              <input
+                type="checkbox"
+                checked={draft.noGuess && supportsNoGuess(draft.pattern)}
+                disabled={!supportsNoGuess(draft.pattern)}
+                onChange={(event) =>
+                  updateConfig({ noGuess: event.target.checked })
+                }
+              />
+              <span>无猜</span>
+            </label>
 
             <label className="settings-checkbox">
               <input

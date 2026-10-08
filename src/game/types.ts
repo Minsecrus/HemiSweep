@@ -14,6 +14,8 @@ export interface GameState {
   status: GameStatus;
   mineCount: number;
   seed: string;
+  /** Requested before the first click; afterwards, whether it was achieved. */
+  noGuess: boolean;
   neighbors: readonly (readonly number[])[];
   startedAt: number | null;
   finishedAt: number | null;

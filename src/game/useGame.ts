@@ -18,11 +18,16 @@ export const DENSITIES = [
   { value: 0.25, name: "噩梦" },
 ] as const;
 export type BoardPattern = GridKind | "regular";
+/** Triangle and square cells leave too many forced guesses to repair quickly. */
+export function supportsNoGuess(pattern: BoardPattern): boolean {
+  return pattern !== "triangular" && pattern !== "quadrilateral";
+}
 export interface GameConfig {
   frequency: number;
   density: number;
   pattern: BoardPattern;
   adjacency: AdjacencyRule;
+  noGuess: boolean;
   a: number;
   b: number;
 }
@@ -31,6 +36,7 @@ const DEFAULT_CONFIG: GameConfig = {
   density: 0.16,
   pattern: "dual",
   adjacency: "edge",
+  noGuess: true,
   a: 5,
   b: 3,
 };
@@ -58,6 +64,7 @@ function startGame(config: GameConfig, seed: string) {
       Math.ceil(mesh.cells.length * config.density),
     ),
     seed,
+    { noGuess: config.noGuess && supportsNoGuess(config.pattern) },
   );
 }
 export function newSeed() {

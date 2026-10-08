@@ -613,6 +613,9 @@ select {
   color: var(--muted);
   font-size: 12px;
 }
+.settings-checkbox:has(input:disabled) {
+  opacity: 0.5;
+}
 .settings-checkbox input {
   width: 14px;
   height: 14px;

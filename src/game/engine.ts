@@ -1,3 +1,4 @@
+import { placeNoGuessMines } from "./noGuess";
 import { seededShuffle } from "./random";
 import type { CellState, GameState } from "./types";
 
@@ -16,6 +17,7 @@ export function createGame(
   neighbors: readonly (readonly number[])[],
   mineCount: number,
   seed: string,
+  options: { noGuess?: boolean } = {},
 ): GameState {
   if (neighbors.length === 0)
     throw new RangeError("A board needs at least one cell.");
@@ -59,6 +61,7 @@ export function createGame(
     status: "ready",
     mineCount,
     seed,
+    noGuess: options.noGuess ?? false,
     neighbors: Object.freeze(graph),
     startedAt: null,
     finishedAt: null,
@@ -80,9 +83,23 @@ function placeMines(
   const available = state.cells
     .map((_, id) => id)
     .filter((id) => !protectedCells.has(id));
-  const mines = new Set(
-    seededShuffle(available, state.seed).slice(0, state.mineCount),
-  );
+  let noGuess = false;
+  let mines: Set<number>;
+  if (state.noGuess) {
+    const layout = placeNoGuessMines(
+      state.neighbors,
+      state.mineCount,
+      available,
+      firstCell,
+      state.seed,
+    );
+    noGuess = layout.guaranteed;
+    mines = new Set(available.filter((id) => layout.mines[id]));
+  } else {
+    mines = new Set(
+      seededShuffle(available, state.seed).slice(0, state.mineCount),
+    );
+  }
   const cells = state.cells.map((cell, id): CellState => ({
     ...cell,
     mine: mines.has(id),
@@ -92,7 +109,14 @@ function placeMines(
     ),
   }));
 
-  return { ...state, cells, status: "playing", startedAt: now, firstCell };
+  return {
+    ...state,
+    cells,
+    noGuess,
+    status: "playing",
+    startedAt: now,
+    firstCell,
+  };
 }
 
 function revealMany(
