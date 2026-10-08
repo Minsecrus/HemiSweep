@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBoardMesh } from "../geometry/tilings";
 import { createRegularMesh } from "../geometry/regular";
+import { createAdjacencyGraph } from "../geometry/adjacency";
+import type { AdjacencyRule } from "../geometry/adjacency";
 import type { BoardMesh, GridKind } from "../geometry/types";
 import { chordCell, createGame, revealCell, toggleFlag } from "./engine";
 
@@ -13,12 +15,14 @@ export const DENSITIES = [
   { value: 0.12, name: "轻松" },
   { value: 0.16, name: "经典" },
   { value: 0.2, name: "挑战" },
+  { value: 0.25, name: "噩梦" },
 ] as const;
 export type BoardPattern = GridKind | "regular";
 export interface GameConfig {
   frequency: number;
   density: number;
   pattern: BoardPattern;
+  adjacency: AdjacencyRule;
   a: number;
   b: number;
 }
@@ -26,6 +30,7 @@ const DEFAULT_CONFIG: GameConfig = {
   frequency: 7,
   density: 0.16,
   pattern: "dual",
+  adjacency: "edge",
   a: 5,
   b: 3,
 };
@@ -47,7 +52,7 @@ function getMesh(config: GameConfig) {
 function startGame(config: GameConfig, seed: string) {
   const mesh = getMesh(config);
   return createGame(
-    mesh.cells.map((c) => c.neighbors),
+    createAdjacencyGraph(mesh, config.adjacency),
     Math.min(
       mesh.cells.length - 1,
       Math.ceil(mesh.cells.length * config.density),

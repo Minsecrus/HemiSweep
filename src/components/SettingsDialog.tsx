@@ -4,6 +4,7 @@ import { DENSITIES, SIZES } from "../game/useGame";
 import type { BoardPattern, GameConfig } from "../game/useGame";
 import { REGULAR_SYMBOLS } from "../geometry/regular";
 import { cellCount } from "../geometry/tilings";
+import type { AdjacencyRule } from "../geometry/adjacency";
 
 export type Theme = "dark" | "paper" | "white";
 
@@ -149,6 +150,7 @@ export default function SettingsDialog({
                 type="button"
                 className={difficulty.value === draft.density ? "selected" : ""}
                 aria-pressed={difficulty.value === draft.density}
+                title={`${Math.round(difficulty.value * 100)}% 地雷`}
                 onClick={() => updateConfig({ density: difficulty.value })}
               >
                 {difficulty.name}
@@ -201,6 +203,22 @@ export default function SettingsDialog({
                 <option value="heptagonal">七边形混合</option>
                 <option value="octagonal">八边形混合</option>
                 <option value="regular">正则镶嵌 {"{a,b}"}</option>
+              </select>
+            </div>
+
+            <div className="settings-group">
+              <label className="field-label" htmlFor="settings-adjacency">
+                邻接规则
+              </label>
+              <select
+                id="settings-adjacency"
+                value={draft.adjacency}
+                onChange={(event) =>
+                  updateConfig({ adjacency: event.target.value as AdjacencyRule })
+                }
+              >
+                <option value="edge">共边</option>
+                <option value="vertex">共边与共点</option>
               </select>
             </div>
 

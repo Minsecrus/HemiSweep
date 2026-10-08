@@ -38,6 +38,7 @@ export default function App() {
     frequency,
     density,
     pattern,
+    adjacency,
     a,
     b,
     reset,
@@ -53,7 +54,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>(savedTheme);
   useViewKeys(setRotation, !helpOpen && !settingsOpen);
-  const config: GameConfig = { frequency, density, pattern, a, b };
+  const config: GameConfig = { frequency, density, pattern, adjacency, a, b };
   const status =
     game.status === "won"
       ? "胜利"
@@ -185,7 +186,7 @@ export default function App() {
         </div>
         <div className="board-wrap">
           <Board
-            key={`${pattern}:${frequency}:${a}:${b}:${density}:${game.seed}`}
+            key={`${pattern}:${frequency}:${a}:${b}:${density}:${adjacency}:${game.seed}`}
             mesh={mesh}
             game={game}
             rotation={rotation}
@@ -207,7 +208,9 @@ export default function App() {
           </button>
         </div>
       </main>
-      {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
+      {helpOpen && (
+        <HelpDialog adjacency={adjacency} onClose={() => setHelpOpen(false)} />
+      )}
       {settingsOpen && (
         <SettingsDialog
           config={config}

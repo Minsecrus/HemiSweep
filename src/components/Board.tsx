@@ -397,7 +397,9 @@ export default function Board({
                       />
                     ) : cell.revealed && cell.adjacentMines > 0 ? (
                       <text
-                        fontSize={numberSize}
+                        fontSize={
+                          numberSize * (cell.adjacentMines >= 10 ? 0.78 : 1)
+                        }
                         textAnchor="middle"
                         dominantBaseline="central"
                         className={`number number-${cell.adjacentMines}`}

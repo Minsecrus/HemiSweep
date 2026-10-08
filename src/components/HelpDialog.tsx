@@ -1,7 +1,14 @@
 import { useEffect, useRef } from "react";
 import { Flag, MousePointer2, Move, X } from "lucide-react";
+import type { AdjacencyRule } from "../geometry/adjacency";
 
-export default function HelpDialog({ onClose }: { onClose: () => void }) {
+export default function HelpDialog({
+  adjacency,
+  onClose,
+}: {
+  adjacency: AdjacencyRule;
+  onClose: () => void;
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     dialog.current?.showModal();
@@ -28,7 +35,9 @@ export default function HelpDialog({ onClose }: { onClose: () => void }) {
           <MousePointer2 size={19} />
           <h3>翻开</h3>
           <p>
-            找出全部安全格即可获胜。数字只统计共边邻居的地雷；空白自动展开。首击安全，格数允许时邻居也安全。
+            找出全部安全格即可获胜。数字统计
+            {adjacency === "vertex" ? "共边或共点" : "共边"}
+            邻居的地雷；空白自动展开。首击安全，格数允许时邻居也安全。
           </p>
         </div>
         <div>

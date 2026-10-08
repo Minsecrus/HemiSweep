@@ -11,6 +11,7 @@ import {
 import { createRegularMesh, REGULAR_SYMBOLS } from "../geometry/regular";
 import { createBoardMesh } from "../geometry/tilings";
 import { createProjectiveMesh } from "../geometry/topology";
+import { createAdjacencyGraph } from "../geometry/adjacency";
 import type { BoardMesh, CellFragment, Quaternion } from "../geometry/types";
 import Board from "./Board";
 
@@ -206,6 +207,47 @@ describe("SVG board supports the other genuine quotient tilings", () => {
       mesh: createRegularMesh(symbol.a, symbol.b),
     })),
   ];
+
+  it("shows 9–12 mines clearly on both fragments of a vertex-adjacent cell", () => {
+    const mesh = createBoardMesh(5, "triangular");
+    const graph = createAdjacencyGraph(mesh, "vertex");
+    const rotation = dragRotation(IDENTITY_ROTATION, 123, -81);
+    const id = seamCell(
+      projectBoard(mesh, rotation),
+      (id) => graph[id].length === 12,
+    );
+    for (const count of [9, 10, 11, 12]) {
+      const mines = new Set(graph[id].slice(0, count));
+      const ready = createGame(graph, count, "svg-vertex-numbers");
+      const game: GameState = {
+        ...ready,
+        status: "playing",
+        startedAt: 1000,
+        cells: ready.cells.map((cell, other) => ({
+          ...cell,
+          mine: mines.has(other),
+          adjacentMines: graph[other].filter((neighbor) => mines.has(neighbor))
+            .length,
+          revealed: other === id,
+        })),
+      };
+      const parts = renderedCells(render(mesh, game, rotation)).filter(
+        (cell) => cell.id === id,
+      );
+      expect(parts).toHaveLength(2);
+      for (const part of parts) {
+        const number = part.markup.match(
+          /<text\b[^>]*font-size="([^"]+)"[^>]*class="number number-(\d+)"[^>]*>(\d+)<\/text>/,
+        );
+        expect(number).not.toBeNull();
+        expect(Number(number![2])).toBe(count);
+        expect(Number(number![3])).toBe(count);
+        expect(Number(number![1])).toBeCloseTo(
+          (0.86 / Math.sqrt(mesh.cells.length)) * (count >= 10 ? 0.78 : 1),
+        );
+      }
+    }
+  });
 
   it.each(tilings)(
     "renders valid paths and internal label positions for $name",

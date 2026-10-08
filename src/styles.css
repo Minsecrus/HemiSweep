@@ -40,6 +40,10 @@
   --number-6: #f2aaa0;
   --number-7: #e1e8d4;
   --number-8: #9cb6cd;
+  --number-9: #d6bfdf;
+  --number-10: #d4c581;
+  --number-11: #97cbbd;
+  --number-12: #c5bcc6;
   color: var(--text);
   background: var(--bg);
   color-scheme: dark;
@@ -82,6 +86,10 @@
   --number-6: #a35d3f;
   --number-7: #373c31;
   --number-8: #6d727d;
+  --number-9: #876784;
+  --number-10: #81712a;
+  --number-11: #4c7666;
+  --number-12: #6b6477;
   color-scheme: light;
 }
 :root[data-theme="white"] {
@@ -122,6 +130,10 @@
   --number-6: #b9543b;
   --number-7: #263b35;
   --number-8: #687b87;
+  --number-9: #805e7c;
+  --number-10: #847124;
+  --number-11: #386e63;
+  --number-12: #5f6170;
   color-scheme: light;
 }
 * {
@@ -420,6 +432,18 @@ html[data-theme="paper"] .brand {
 }
 .number-8 {
   fill: var(--number-8);
+}
+.number-9 {
+  fill: var(--number-9);
+}
+.number-10 {
+  fill: var(--number-10);
+}
+.number-11 {
+  fill: var(--number-11);
+}
+.number-12 {
+  fill: var(--number-12);
 }
 .disk-edge {
   stroke: var(--disk-edge);
